@@ -1,0 +1,1521 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Penjelajah Bintang - Segi Empat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #17121f; --yellow: #ffd84d; --purple: #6c55bd; --purpleSoft: #f2edff;
+        --green: #48c97f; --red: #ef6b6b; --line: #dfd4ee; --text: #332c3a; --muted: #746a7a;
+        --right: #24874d; --rightBg: #eafff1; --wrong: #cf4f4f; --wrongBg: #fff0f0;
+      }
+      * { box-sizing: border-box; }
+      html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+      body {
+        display: flex; flex-direction: column; height: 100svh; background: #1a1240; color: var(--text);
+        font-family: "Nunito", "Segoe UI", system-ui, sans-serif; font-weight: 700;
+        padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+      }
+      button { font: inherit; cursor: pointer; color: inherit; }
+      button:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
+
+      /* ===== Header seri (sama dengan ular tangga) ===== */
+      header {
+        flex: none; min-height: 64px; background: var(--ink); border-bottom: 4px solid var(--yellow); color: #fff;
+        padding: 8px 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; z-index: 5;
+      }
+      .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+      .brand img { width: 42px; height: 42px; object-fit: contain; flex: none; }
+      .brand h1 { font: 600 20px/1.2 "Fredoka", sans-serif; margin: 0; }
+      .scores { display: flex; gap: 8px; flex: none; }
+      .score { background: #fff; color: #55426d; border-radius: 14px; padding: 6px 14px; text-align: center; font: 600 13px/1.2 "Fredoka", sans-serif; min-width: 64px; }
+      .score b { display: block; font-size: 20px; color: var(--purple); font-variant-numeric: tabular-nums; }
+
+      /* ===== Area game: mengisi sisa layar ===== */
+      .game {
+        position: relative; flex: 1; min-height: 0; overflow: hidden;
+        background:
+          radial-gradient(circle at 18% 22%, rgba(255, 143, 208, 0.22), transparent 30%),
+          radial-gradient(circle at 80% 75%, rgba(111, 168, 255, 0.22), transparent 32%),
+          linear-gradient(180deg, #2b1d63 0%, #3a2580 45%, #1a1240 100%);
+      }
+      canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+      .hud { position: absolute; top: 10px; left: 10px; display: flex; gap: 8px; align-items: flex-start; pointer-events: none; }
+      .meter {
+        background: #fff; border: 2px solid var(--ink); border-radius: 12px; padding: 5px 10px; min-width: 62px;
+        box-shadow: 0 3px 0 var(--ink); text-align: center;
+      }
+      .meter strong { display: block; font: 700 16px/1.1 "Fredoka", sans-serif; color: var(--purple); font-variant-numeric: tabular-nums; }
+      .meter span { display: block; font-size: 11px; color: var(--muted); line-height: 1.1; }
+      .lifebox { min-width: 120px; text-align: left; }
+      .bar { height: 8px; margin-top: 4px; overflow: hidden; border-radius: 999px; background: #eee8f7; border: 1px solid #cbbdf0; }
+      .fill { width: 100%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #ef6b6b, #ffd84d, #48c97f); transition: width 120ms linear; }
+      .actions { display: flex; gap: 8px; pointer-events: auto; }
+      .iconBtn {
+        width: 40px; height: 40px; display: inline-grid; place-items: center; background: #fff; border: 2px solid var(--ink);
+        border-radius: 12px; box-shadow: 0 3px 0 var(--ink); color: var(--ink);
+      }
+      .textBtn { width: auto; padding: 0 12px; gap: 6px; display: inline-flex; align-items: center; font: 600 14px "Fredoka", sans-serif; white-space: nowrap; }
+      .smTxt { display: none; }
+      .iconBtn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+      .iconBtn svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2.4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+      /* ===== Kotak soal ===== */
+      .quiz {
+        position: absolute; left: 12px; right: 12px; bottom: 16px; margin: 0 auto; width: fit-content; max-width: calc(100% - 24px);
+        padding: 8px 20px 10px; border-radius: 16px; background: #fff; border: 2px solid var(--ink); box-shadow: 0 5px 0 var(--ink);
+        text-align: center; font-size: 14px; line-height: 1.3; color: var(--muted); pointer-events: none;
+      }
+      .quiz b { display: block; white-space: normal; font: 700 clamp(18px, 3vw, 26px)/1.15 "Fredoka", sans-serif; color: var(--purple); font-variant-numeric: tabular-nums; }
+      .quiz.ok { background: var(--rightBg); color: var(--right); }
+      .quiz.ok b { color: var(--right); }
+      .quiz.no { background: var(--wrongBg); color: var(--wrong); }
+      .quiz.no b { color: var(--wrong); }
+
+      /* ===== Panel awal / jeda / akhir ===== */
+      .overlay { position: absolute; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(23, 18, 31, 0.45); overflow: auto; z-index: 4; }
+      .panel {
+        width: min(500px, 100%); padding: 22px; background: #fff; border: 2px solid var(--ink); border-radius: 22px;
+        box-shadow: 7px 7px 0 var(--ink); margin: auto;
+      }
+      .panel h2 { margin: 0; font: 700 clamp(28px, 5vw, 40px)/1.05 "Fredoka", sans-serif; color: var(--purple); }
+      .panel p { margin: 10px 0 0; color: var(--text); line-height: 1.5; font-size: 15px; }
+      .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 16px 0; }
+      .chip { padding: 9px 11px; border: 2px solid var(--line); border-radius: 14px; background: #fff; font-size: 13px; color: var(--muted); line-height: 1.35; }
+      .chip b { color: var(--text); font-family: "Fredoka", sans-serif; font-weight: 600; font-size: 14px; }
+      .chip.math { grid-column: 1 / -1; background: var(--purpleSoft); border-color: #cbbdf0; }
+      .levels { margin: 0; }
+      #startBtn { margin-top: 16px; }
+      .levels .lbl { display: block; font: 600 15px "Fredoka", sans-serif; color: var(--purple); margin-bottom: 6px; }
+      .lvlRow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .lvlRow button { background: #fff; border: 2px solid var(--line); border-radius: 14px; padding: 8px 4px; box-shadow: 0 3px 0 var(--line); font: 600 16px "Fredoka", sans-serif; }
+      .lvlRow button small { display: block; font: 800 12px "Nunito", sans-serif; color: var(--muted); }
+      .lvlRow button[aria-pressed="true"] { background: var(--purpleSoft); border-color: var(--purple); box-shadow: 0 3px 0 var(--purple); color: var(--purple); }
+      .primary {
+        width: 100%; border: 2px solid var(--ink); border-radius: 999px; background: var(--yellow); color: #5b4300;
+        padding: 12px 20px; font: 700 18px "Fredoka", sans-serif; box-shadow: 0 5px 0 var(--ink);
+      }
+      .primary.secondary { background: #fff; color: var(--text); margin-top: 12px; }
+      .primary:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink); }
+      .hidden { display: none !important; }
+
+      .touchpad { position: absolute; inset: auto 16px 16px; display: none; grid-template-columns: repeat(2, 60px); justify-content: space-between; pointer-events: none; }
+      .touchpad button {
+        width: 60px; height: 60px; pointer-events: auto; background: rgba(255, 255, 255, 0.85); border: 2px solid var(--ink);
+        border-radius: 16px; box-shadow: 0 4px 0 var(--ink); display: grid; place-items: center; color: var(--ink);
+      }
+      .touchpad svg { width: 24px; height: 24px; stroke: currentColor; stroke-width: 2.6; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+      @media (max-width: 760px) {
+        header { min-height: 56px; padding: 6px 10px; }
+        .brand img { width: 34px; height: 34px; }
+        .brand h1 { font-size: 14px; }
+        .score { padding: 4px 9px; font-size: 11px; min-width: 0; border-radius: 11px; }
+        .score b { font-size: 16px; }
+        .hud { top: 8px; left: 8px; gap: 6px; flex-wrap: wrap; right: 8px; }
+        .meter { min-width: 52px; padding: 4px 7px; }
+        .lifebox { min-width: 100px; }
+        .iconBtn { width: 36px; height: 36px; }
+        .textBtn { width: auto; padding: 0 10px; font-size: 13px; }
+        .lgTxt { display: none; } .smTxt { display: inline; }
+        .touchpad { display: grid; }
+        .legend { grid-template-columns: 1fr; }
+        .quiz { bottom: 88px; padding: 6px 14px 8px; font-size: 13px; }
+        .quiz b { font-size: 19px; }
+        .panel { padding: 16px; box-shadow: 4px 4px 0 var(--ink); }
+      }
+      @media (max-width: 380px) { .brand h1 { font-size: 12px; } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand"><img src="data:image/png;base64,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" alt="Logo Yudhistira"><h1>Penjelajah Bintang: Segi Empat</h1></div>
+      <div class="scores">
+        <div class="score">SKOR<b id="score">0</b></div>
+        <div class="score">BENAR<b id="mathScore">0/0</b></div>
+      </div>
+    </header>
+    <main class="game" id="gameArea" aria-label="Game Penjelajah Bintang">
+      <canvas id="world"></canvas>
+
+      <section class="hud" aria-live="polite">
+        <div class="meter lifebox">
+          <strong id="shieldText">100%</strong><span>Nyawa</span>
+          <div class="bar"><div id="shieldFill" class="fill"></div></div>
+        </div>
+        <div class="meter"><strong id="combo">x1</strong><span>Kombo</span></div>
+        <div class="meter"><strong id="best">0</strong><span>Terbaik</span></div>
+        <div class="actions">
+          <button id="pauseBtn" class="iconBtn" type="button" title="Jeda" aria-label="Jeda">
+            <svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14" /></svg>
+          </button>
+          <button id="restartBtn" class="iconBtn" type="button" title="Mulai ulang" aria-label="Mulai ulang">
+            <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v6h6" /></svg>
+          </button>
+          <button id="menuBtn" class="iconBtn textBtn" type="button" aria-label="Kembali ke menu">🏠 <span class="lgTxt">Kembali ke menu</span><span class="smTxt">Menu</span></button>
+        </div>
+      </section>
+
+      <section id="quizBanner" class="quiz hidden" aria-live="polite"></section>
+
+      <section id="overlay" class="overlay">
+        <div class="panel">
+          <h2 id="title">Penjelajah Bintang</h2>
+          <p id="message">
+            Terbangkan roketmu di antara meteor. Tabrak bola bergambar segi empat yang sesuai dengan petunjuk. Jawaban benar menambah nyawa dan menguatkan tembakan. Kalahkan Raja Komet untuk menang.
+          </p>
+          <div class="legend" id="legend">
+            <div class="chip math"><b>▱ Bola bangun</b><br />Baca petunjuk, lalu gerakkan pesawat untuk menabrak bangun yang benar. Benar: nyawa +20. Salah: nyawa −15.</div>
+            <div class="chip"><b>🕹️ Cara bergerak</b><br />Mouse, sentuh layar, atau tombol panah. Spasi atau P untuk jeda.</div>
+            <div class="chip"><b>🪙 Koin bintang</b><br />Tambah skor dan sedikit nyawa.</div>
+            <div class="chip"><b>⚡ ❤️ 🛡️ Kotak kekuatan</b><br />Tembakan kuat, nyawa, dan perisai.</div>
+            <div class="chip"><b>☄️ Meteor besar bergaris merah</b><br />Keras dan berbahaya, hindari!</div>
+          </div>
+          <div class="levels" id="levelPick">
+            <span class="lbl">Tingkat soal</span>
+            <div class="lvlRow">
+              <button type="button" data-lv="easy">Mudah<small>Kenali bentuk</small></button>
+              <button type="button" data-lv="medium">Sedang<small>Sifat bangun</small></button>
+              <button type="button" data-lv="hard">Sulit<small>Bangun mirip</small></button>
+            </div>
+          </div>
+          <button id="startBtn" class="primary" type="button">🚀 Mulai terbang</button>
+          <button id="confirmMenuBtn" class="primary secondary hidden" type="button">🏠 Ya, kembali ke menu</button>
+        </div>
+      </section>
+
+      <section class="touchpad" aria-hidden="true">
+        <button id="leftBtn" type="button" title="Ke kiri"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6" /></svg></button>
+        <button id="rightBtn" type="button" title="Ke kanan"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></svg></button>
+      </section>
+    </main>
+
+    <script>
+      const canvas = document.getElementById("world");
+      const ctx = canvas.getContext("2d");
+      const scoreEl = document.getElementById("score");
+      const comboEl = document.getElementById("combo");
+      const bestEl = document.getElementById("best");
+      const mathScoreEl = document.getElementById("mathScore");
+      const shieldText = document.getElementById("shieldText");
+      const shieldFill = document.getElementById("shieldFill");
+      const overlay = document.getElementById("overlay");
+      const titleEl = document.getElementById("title");
+      const gameArea = document.getElementById("gameArea");
+      const messageEl = document.getElementById("message");
+      const legendEl = document.getElementById("legend");
+      const levelPick = document.getElementById("levelPick");
+      const quizBanner = document.getElementById("quizBanner");
+      const startBtn = document.getElementById("startBtn");
+      const pauseBtn = document.getElementById("pauseBtn");
+      const restartBtn = document.getElementById("restartBtn");
+      const menuBtn = document.getElementById("menuBtn");
+      const confirmMenuBtn = document.getElementById("confirmMenuBtn");
+      const MENU_TITLE = document.getElementById("title").textContent;
+      const MENU_MESSAGE = document.getElementById("message").textContent.replace(/\s+/g, " ").trim();
+      const leftBtn = document.getElementById("leftBtn");
+      const rightBtn = document.getElementById("rightBtn");
+
+      const storeKey = "starfall-segiempat-best";
+      const levelKey = "penjelajah-segiempat-level";
+      function readStore(key, fallback) { try { return localStorage.getItem(key) || fallback; } catch (e) { return fallback; } }
+      function writeStore(key, value) { try { localStorage.setItem(key, value); } catch (e) {} }
+
+      const bossScores = [10000, 50000, 100000, 200000, 400000, 800000, 1200000];
+      const state = {
+        width: 0, height: 0, dpr: 1,
+        running: false, paused: false, gameOver: false,
+        score: 0, combo: 1, streak: 0, shield: 100,
+        best: Number(readStore(storeKey, 0)),
+        time: 0, spawn: 0, rubySpawn: 10, sapphireSpawn: 10, emeraldSpawn: 10,
+        rubyPower: 0, emeraldGuard: 0,
+        fireCooldown: 0, greenCooldown: 0, missileCooldown: 0,
+        lanes: 1, greenLanes: 0, missileCount: 0,
+        bossIndex: 0, boss: null, bossProjectiles: [], shake: 0,
+        player: { x: 0, y: 0, radius: 36, vx: 0, vy: 0 },
+        pointerX: null, pointerY: null,
+        bullets: [], missiles: [], stars: [], rocks: [], gems: [], particles: [], backdrop: [], planets: [],
+        keys: new Set(),
+        // --- soal segi empat ---
+        quizLevel: ["easy", "medium", "hard"].includes(readStore(levelKey, "")) ? readStore(levelKey, "") : "medium",
+        quiz: { phase: "wait", timer: 4, q: null, orbs: [], msgTimer: 0 },
+        qRight: 0, qTotal: 0,
+      };
+
+      /* Bank soal segi empat. Setiap soal muncul sekali sebelum bank soal diulang. */
+      function shuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+        return arr;
+      }
+      const shapeLabels = {
+        square: "persegi", rectangle: "persegi panjang", parallelogram: "jajargenjang",
+        kite: "layang-layang", rhombus: "belah ketupat", trapezoid: "trapesium sama kaki",
+        rightTrapezoid: "trapesium siku-siku", scaleneTrapezoid: "trapesium sembarang",
+        irregular: "segi empat sembarang",
+      };
+      const questionBank = {
+        easy: [
+          { prompt: "Cari persegi!", answer: "square", wrong: ["rectangle", "parallelogram"] },
+          { prompt: "Cari persegi panjang!", answer: "rectangle", wrong: ["square", "trapezoid"] },
+          { prompt: "Cari jajargenjang!", answer: "parallelogram", wrong: ["trapezoid", "rectangle"] },
+          { prompt: "Cari layang-layang!", answer: "kite", wrong: ["rhombus", "parallelogram"] },
+          { prompt: "Cari trapesium!", answer: "trapezoid", wrong: ["square", "kite"] },
+          { prompt: "Cari belah ketupat!", answer: "rhombus", wrong: ["kite", "rectangle"] },
+          { prompt: "Cari segi empat sembarang!", answer: "irregular", wrong: ["parallelogram", "trapezoid"] },
+        ],
+        medium: [
+          { prompt: "Empat sisi sama dan sudut siku-siku.", answer: "square", wrong: ["rhombus", "rectangle"] },
+          { prompt: "Empat sudut siku-siku; panjang dan lebar berbeda.", answer: "rectangle", wrong: ["square", "parallelogram"] },
+          { prompt: "Dua pasang sisi sejajar; bentuknya miring.", answer: "parallelogram", wrong: ["trapezoid", "kite"] },
+          { prompt: "Empat sisi sama panjang; seperti wajik.", answer: "rhombus", wrong: ["kite", "rectangle"] },
+          { prompt: "Dua pasang sisi berdekatan sama panjang.", answer: "kite", wrong: ["parallelogram", "trapezoid"] },
+        ],
+        hard: [
+          { prompt: "Cari trapesium sama kaki!", answer: "trapezoid", wrong: ["rightTrapezoid", "scaleneTrapezoid"] },
+          { prompt: "Cari trapesium siku-siku!", answer: "rightTrapezoid", wrong: ["trapezoid", "parallelogram"] },
+          { prompt: "Cari trapesium sembarang!", answer: "scaleneTrapezoid", wrong: ["trapezoid", "rightTrapezoid"] },
+          { prompt: "Cari belah ketupat!", answer: "rhombus", wrong: ["kite", "square"] },
+          { prompt: "Cari segi empat sembarang!", answer: "irregular", wrong: ["parallelogram", "trapezoid"] },
+        ],
+      };
+      const questionDecks = { easy: [], medium: [], hard: [] };
+      function makeQuestion(level) {
+        if (!questionDecks[level].length) questionDecks[level] = shuffle(questionBank[level].slice());
+        const q = questionDecks[level].pop();
+        return { ...q, options: shuffle([q.answer, ...q.wrong]) };
+      }
+
+      function setBanner(html, cls) {
+        quizBanner.innerHTML = html;
+        quizBanner.className = "quiz " + (cls || "");
+      }
+      function hideBanner() { quizBanner.className = "quiz hidden"; }
+
+      function startQuiz() {
+        const quiz = state.quiz;
+        quiz.q = makeQuestion(state.quizLevel);
+        quiz.phase = "ask";
+        quiz.msgTimer = 0;
+        const xs = shuffle([1 / 6, 3 / 6, 5 / 6]);
+        // Level Sedang: bola turun lebih lambat agar siswa sempat mengamati bentuk
+        const slow = state.quizLevel === "medium" ? 0.7 : 1;
+        const vy = clamp(state.height / 8.5, 60, 110) * slow;
+        quiz.orbs = quiz.q.options.map((value, i) => ({
+          value, x: state.width * xs[i], y: -44, r: 39, radius: 39, vy, bob: Math.random() * 6,
+        }));
+        setBanner(`Tabrak bangun yang benar<b>${quiz.q.prompt}</b>`, "");
+      }
+
+      function answerQuiz(correct, orb) {
+        const quiz = state.quiz, q = quiz.q;
+        state.qTotal += 1;
+        if (correct) {
+          state.qRight += 1;
+          state.shield = clamp(state.shield + 20, 0, 100);
+          state.rubyPower = Math.max(state.rubyPower, 5);
+          state.streak += 1;
+          state.combo = clamp(1 + Math.floor(state.streak / 5), 1, 9);
+          state.score += 250 * state.combo;
+          burst(orb.x, orb.y, "#70e1c8", 40);
+          burst(orb.x, orb.y, "#ffd166", 20);
+          setBanner(`Benar! Nyawa +20, tembakan kuat 5 detik<b>${shapeLabels[q.answer]}</b>`, "ok");
+        } else {
+          state.shield -= 15;
+          state.streak = 0;
+          state.combo = 1;
+          state.shake = Math.max(state.shake, 8);
+          burst(orb.x, orb.y, "#ff6b6b", 30);
+          setBanner(`Belum tepat. Jawaban yang benar:<b>${shapeLabels[q.answer]}</b>`, "no");
+        }
+        quiz.orbs = [];
+        quiz.phase = "wait";
+        quiz.timer = 8;
+        quiz.msgTimer = 2.4;
+      }
+
+      function missQuiz() {
+        const quiz = state.quiz, q = quiz.q;
+        state.qTotal += 1;
+        setBanner(`Terlewat! Jawaban yang benar:<b>${shapeLabels[q.answer]}</b>`, "no");
+        quiz.orbs = [];
+        quiz.phase = "wait";
+        quiz.timer = 6;
+        quiz.msgTimer = 2.4;
+      }
+
+      function updateQuiz(dt) {
+        const quiz = state.quiz;
+        if (quiz.msgTimer > 0) {
+          quiz.msgTimer -= dt;
+          if (quiz.msgTimer <= 0 && quiz.phase === "wait") hideBanner();
+        }
+        if (quiz.phase === "wait") {
+          quiz.timer -= dt;
+          if (quiz.timer <= 0) startQuiz();
+          return;
+        }
+        for (const orb of quiz.orbs) {
+          orb.y += orb.vy * dt;
+          orb.x += Math.sin(state.time * 2 + orb.bob) * 10 * dt;
+        }
+        for (const orb of quiz.orbs) {
+          if (hit(orb, state.player)) { answerQuiz(orb.value === quiz.q.answer, orb); return; }
+        }
+        if (quiz.orbs.every((orb) => orb.y > state.height + orb.r)) missQuiz();
+      }
+
+      /* ========================= Game asli ========================= */
+      function resize() {
+        state.dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+        const rect = gameArea.getBoundingClientRect();
+        state.width = Math.max(1, Math.round(rect.width));
+        state.height = Math.max(1, Math.round(rect.height));
+        canvas.width = Math.floor(state.width * state.dpr);
+        canvas.height = Math.floor(state.height * state.dpr);
+        canvas.style.width = state.width + "px";
+        canvas.style.height = state.height + "px";
+        ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
+        state.player.y = state.player.y || state.height - Math.max(110, state.height * 0.18);
+        state.player.x = state.player.x || state.width / 2;
+        state.player.x = clamp(state.player.x, 46, state.width - 46);
+        state.player.y = clamp(state.player.y, 86, state.height - 58);
+        makeBackdrop();
+      }
+
+      function makeBackdrop() {
+        const count = Math.floor((state.width * state.height) / 11500);
+        state.backdrop = Array.from({ length: count }, () => ({
+          x: Math.random() * state.width, y: Math.random() * state.height,
+          r: Math.random() * 1.8 + 0.4, speed: Math.random() * 28 + 12, glow: Math.random() * 0.7 + 0.25,
+        }));
+        state.planets = [
+          { type: "ring", x: state.width * 0.84, y: state.height * 0.3, r: Math.min(46, state.width * 0.07) },
+          { type: "moon", x: state.width * 0.12, y: state.height * 0.68, r: Math.min(26, state.width * 0.045) },
+        ];
+      }
+
+      function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
+
+      function reset() {
+        state.running = true; state.paused = false; state.gameOver = false;
+        state.score = 0; state.combo = 1; state.streak = 0; state.shield = 100;
+        state.time = 0; state.spawn = 0; state.rubySpawn = 10; state.sapphireSpawn = 10; state.emeraldSpawn = 10;
+        state.rubyPower = 0; state.emeraldGuard = 0;
+        state.fireCooldown = 0; state.greenCooldown = 0; state.missileCooldown = 0;
+        state.lanes = 1; state.greenLanes = 0; state.missileCount = 0;
+        state.bossIndex = 0; state.boss = null; state.bossProjectiles = []; state.shake = 0;
+        state.bullets = []; state.missiles = []; state.stars = []; state.rocks = []; state.gems = []; state.particles = [];
+        state.player.x = state.width / 2;
+        state.player.y = state.height - Math.max(110, state.height * 0.18);
+        state.player.vx = 0; state.player.vy = 0;
+        state.quiz = { phase: "wait", timer: 4, q: null, orbs: [], msgTimer: 0 };
+        state.qRight = 0; state.qTotal = 0;
+        hideBanner();
+        overlay.classList.add("hidden");
+        updateHud();
+      }
+
+      function pauseToggle() {
+        if (!state.running || state.gameOver) return;
+        state.paused = !state.paused;
+        if (state.paused) {
+          showOverlay("Dijeda", "Tarik napas dulu. Setelah dilanjutkan, meteor dan bola bangun akan turun lagi.", "▶️ Lanjutkan", false);
+        } else {
+          overlay.classList.add("hidden");
+        }
+      }
+
+      function showOverlay(title, message, button, showSetup) {
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+        startBtn.textContent = button;
+        legendEl.classList.toggle("hidden", !showSetup);
+        confirmMenuBtn.classList.add("hidden");
+        levelPick.classList.toggle("hidden", !showSetup);
+        overlay.classList.remove("hidden");
+      }
+
+      function formatNum(n) { return Math.floor(n).toLocaleString("id-ID"); }
+
+      function endGame() {
+        state.running = false; state.gameOver = true;
+        state.best = Math.max(state.best, Math.floor(state.score));
+        writeStore(storeKey, String(state.best));
+        updateHud();
+        hideBanner();
+        showOverlay(
+          "Perjalanan selesai",
+          `Skor akhir ${formatNum(state.score)}. Kamu menjawab benar ${state.qRight} dari ${state.qTotal} soal. Pilih tingkat soal lalu coba lagi!`,
+          "🚀 Main lagi", true,
+        );
+      }
+
+      function completeGame() {
+        state.running = false; state.gameOver = true;
+        state.best = Math.max(state.best, Math.floor(state.score));
+        writeStore(storeKey, String(state.best));
+        updateHud();
+        hideBanner();
+        showOverlay(
+          "Selamat, kamu menang!",
+          `Kamu mengalahkan Raja Komet di 1.200.000 poin. Skor akhir ${formatNum(state.score)}, soal benar ${state.qRight} dari ${state.qTotal}.`,
+          "🚀 Main lagi", true,
+        );
+      }
+
+      function updateHud() {
+        scoreEl.textContent = Math.floor(state.score);
+        comboEl.textContent = "x" + state.combo;
+        bestEl.textContent = state.best;
+        mathScoreEl.textContent = state.qRight + "/" + state.qTotal;
+        shieldText.textContent = Math.max(0, Math.ceil(state.shield)) + "%";
+        shieldFill.style.width = clamp(state.shield, 0, 100) + "%";
+      }
+
+      function difficulty() { return Math.min(3.4, 1 + state.time / 42); }
+      function bulletLaneCount() { return clamp(1 + Math.floor(state.score / 1000), 1, 5); }
+      function greenLaneCount() {
+        if (state.score < 500000) return 0;
+        return clamp(1 + Math.floor((state.score - 500000) / 30000), 1, 6);
+      }
+      function scorePowerMultiplier() { return state.score >= 200000 ? 2 : 1; }
+      function missileUnlockCount() {
+        const firstMissileScore = 1000 * 4 + 500;
+        if (state.score < firstMissileScore) return 0;
+        return clamp(1 + Math.floor((state.score - firstMissileScore) / 1000), 1, 5);
+      }
+
+      function unlockBulletLanes() {
+        const unlockedLanes = bulletLaneCount();
+        if (unlockedLanes <= state.lanes) return false;
+        state.lanes = unlockedLanes; state.fireCooldown = 0;
+        burst(state.player.x, state.player.y - 34, "#70e1c8", 18);
+        return true;
+      }
+      function unlockGreenLanes() {
+        const unlockedLanes = greenLaneCount();
+        if (unlockedLanes <= state.greenLanes) return false;
+        state.greenLanes = unlockedLanes; state.greenCooldown = 0;
+        burst(state.player.x, state.player.y - 38, "#7CFF6B", 26);
+        return true;
+      }
+      function unlockMissiles() {
+        const unlockedMissiles = missileUnlockCount();
+        if (unlockedMissiles <= state.missileCount) return false;
+        state.missileCount = unlockedMissiles; state.missileCooldown = 0;
+        burst(state.player.x, state.player.y - 40, "#7dd3fc", 22);
+        return true;
+      }
+
+      function spawnBoss() {
+        const scoreMark = bossScores[state.bossIndex];
+        const bossHp = 100 * Math.pow(2, state.bossIndex);
+        const kind = [200000, 400000, 800000].includes(scoreMark) ? "bull" : scoreMark === 1200000 ? "demon" : "tom";
+        const radius = kind === "demon" ? 75 : 50;
+        state.boss = {
+          x: state.width / 2, baseX: state.width / 2,
+          y: Math.max(kind === "demon" ? 150 : 112, state.height * 0.14),
+          r: radius, radius, kind, hp: bossHp, maxHp: bossHp, scoreMark,
+          fireTimer: kind === "tom" ? 3 : 5, flame: null, laser: null,
+          movePhase: Math.random() * Math.PI * 2, hitFlash: 0,
+        };
+        state.bossIndex += 1;
+        state.bossProjectiles = [];
+        state.shake = Math.max(state.shake, 7);
+        burst(state.boss.x, state.boss.y, "#7dd3fc", 46);
+      }
+
+      function damageBoss(amount) {
+        if (!state.boss) return;
+        state.boss.hp -= amount;
+        state.boss.hitFlash = 0.16;
+        if (state.boss.hp <= 0) {
+          const x = state.boss.x, y = state.boss.y, scoreMark = state.boss.scoreMark;
+          state.boss = null;
+          state.bossProjectiles = [];
+          state.score += 1000 * state.combo;
+          state.shake = Math.max(state.shake, 12);
+          burst(x, y, "#7dd3fc", 54);
+          burst(x, y, "#ff9f6e", 60);
+          if (scoreMark === 1200000) completeGame();
+        }
+      }
+
+      function updateBoss(dt) {
+        if (!state.boss && state.bossIndex < bossScores.length && state.score >= bossScores[state.bossIndex]) spawnBoss();
+        const boss = state.boss;
+        if (!boss) return;
+        boss.baseX = state.width / 2;
+        boss.y = Math.max(boss.kind === "demon" ? 150 : 112, state.height * 0.14);
+        boss.x = boss.kind === "bull"
+          ? clamp(boss.baseX + Math.sin(state.time * 0.72 + boss.movePhase) * state.width * 0.22, boss.r + 20, state.width - boss.r - 20)
+          : state.width / 2;
+        boss.hitFlash = Math.max(0, boss.hitFlash - dt);
+        boss.fireTimer -= dt;
+
+        if (boss.kind === "bull") {
+          if (boss.fireTimer <= 0) { spawnBullRing(boss); boss.fireTimer = 5; }
+          return;
+        }
+        if (boss.kind === "demon") { updateDemonLaser(boss, dt); return; }
+
+        if (!boss.flame && boss.fireTimer <= 0) {
+          const width = state.width / 3;
+          boss.flame = { x: clamp(state.player.x, width / 2, state.width - width / 2), width, warmup: 0.55, active: 0.9, hit: false };
+          boss.fireTimer = 3;
+        }
+        if (!boss.flame) return;
+        if (boss.flame.warmup > 0) { boss.flame.warmup -= dt; return; }
+        boss.flame.active -= dt;
+        const half = boss.flame.width / 2;
+        const inFire = Math.abs(state.player.x - boss.flame.x) <= half && state.player.y > boss.y;
+        if (inFire && !boss.flame.hit) {
+          state.shield -= state.emeraldGuard > 0 ? 25 : 50;
+          state.streak = 0; state.combo = 1;
+          state.shake = Math.max(state.shake, 12);
+          boss.flame.hit = true;
+          burst(state.player.x, state.player.y, "#ff6b6b", 28);
+        }
+        if (boss.flame.active <= 0) boss.flame = null;
+      }
+
+      function spawnBullRing(boss) {
+        const speed = 150;
+        for (let i = 0; i < 8; i++) {
+          const angle = -Math.PI / 2 + (i * Math.PI * 2) / 8;
+          state.bossProjectiles.push({
+            type: "bullHead",
+            x: boss.x + Math.cos(angle) * 18, y: boss.y + boss.r * 0.7 + Math.sin(angle) * 18,
+            r: 17, radius: 17,
+            vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed + 170,
+            rot: angle, spin: 4.5, hit: false,
+          });
+        }
+        burst(boss.x, boss.y + boss.r, "#c9cfe8", 24);
+      }
+
+      function updateDemonLaser(boss, dt) {
+        if (!boss.laser && boss.fireTimer <= 0) {
+          const leftSide = Math.random() < 0.5;
+          boss.laser = { x: leftSide ? 0 : state.width / 2, width: state.width / 2, warmup: 0.7, active: 0.9, hit: false };
+          boss.fireTimer = 5;
+        }
+        if (!boss.laser) return;
+        if (boss.laser.warmup > 0) { boss.laser.warmup -= dt; return; }
+        boss.laser.active -= dt;
+        const inLaser = state.player.x >= boss.laser.x && state.player.x <= boss.laser.x + boss.laser.width && state.player.y > boss.y;
+        if (inLaser && !boss.laser.hit) {
+          state.shield -= state.emeraldGuard > 0 ? 35 : 70;
+          state.streak = 0; state.combo = 1;
+          state.shake = Math.max(state.shake, 14);
+          boss.laser.hit = true;
+          burst(state.player.x, state.player.y, "#ff7a3d", 34);
+        }
+        if (boss.laser.active <= 0) boss.laser = null;
+      }
+
+      function spawnObject() {
+        const level = difficulty();
+        const rockChance = clamp(0.42 + state.time / 180, 0.42, 0.72);
+        const isStar = Math.random() > rockChance;
+        const isBigRock = !isStar && Math.random() < 0.1 + Math.min(0.12, state.time / 500);
+        const size = isStar ? 12 + Math.random() * 7 : isBigRock ? 96 + Math.random() * 28 : 18 + Math.random() * 18;
+        const item = {
+          x: 26 + Math.random() * (state.width - 52), y: isBigRock ? -120 : -40,
+          r: size, radius: size, type: isBigRock ? "bigRock" : isStar ? "star" : "rock",
+          rot: Math.random() * Math.PI, spin: (Math.random() - 0.5) * 4,
+          hp: isStar ? 1 : isBigRock ? 30 : Math.max(1, Math.ceil(size / 20)),
+          vy: (isStar ? 145 : 135) * level + Math.random() * (80 + level * 24),
+          wobble: Math.random() * 8,
+        };
+        if (isStar) state.stars.push(item);
+        else state.rocks.push(item);
+      }
+
+      function spawnGem(type) {
+        const color = type === "ruby" ? "#ff4d6d" : type === "sapphire" ? "#4dabff" : "#5cff8d";
+        state.gems.push({
+          type, color, x: 30 + Math.random() * (state.width - 60), y: -28, r: 15, radius: 15,
+          vy: 155 + Math.random() * 60, rot: Math.random() * Math.PI, spin: (Math.random() - 0.5) * 5,
+        });
+      }
+
+      function fireBullet() {
+        const lanes = state.lanes, spacing = 14, center = (lanes - 1) / 2;
+        const powerBoost = scorePowerMultiplier() * (state.rubyPower > 0 ? 2 : 1);
+        for (let i = 0; i < lanes; i++) {
+          const spread = i - center;
+          state.bullets.push({
+            x: state.player.x + spread * spacing, y: state.player.y - 50, r: 4, radius: 4,
+            power: powerBoost, color: "#ff8fd0", vx: spread * 42, vy: -620, life: 1.1,
+          });
+        }
+        burst(state.player.x, state.player.y - 56, "#ff8fd0", 2 + lanes);
+      }
+
+      function fireGreenBullet() {
+        const lanes = state.greenLanes;
+        if (lanes <= 0) return;
+        const spacing = 17, center = (lanes - 1) / 2;
+        const powerBoost = scorePowerMultiplier() * (state.rubyPower > 0 ? 2 : 1);
+        for (let i = 0; i < lanes; i++) {
+          const spread = i - center;
+          state.bullets.push({
+            x: state.player.x + spread * spacing, y: state.player.y - 62, r: 5, radius: 5,
+            power: 2 * powerBoost, color: "#6ff0ff", vx: spread * 36, vy: -690, life: 1.18,
+          });
+        }
+        burst(state.player.x, state.player.y - 68, "#6ff0ff", 4 + lanes);
+      }
+
+      function fireMissiles() {
+        const count = state.missileCount;
+        if (count <= 0) return;
+        const spacing = 20, center = (count - 1) / 2;
+        for (let i = 0; i < count; i++) {
+          const spread = i - center;
+          state.missiles.push({
+            x: state.player.x + spread * spacing, y: state.player.y - 52, r: 8, radius: 8,
+            vx: spread * 34, vy: -360, life: 2.8, trail: [],
+          });
+        }
+        burst(state.player.x, state.player.y - 72, "#7dd3fc", 4 + count);
+      }
+
+      function nearestRock(missile) {
+        let target = null, best = Infinity;
+        if (state.boss && state.boss.y < missile.y + 40) {
+          const dx = state.boss.x - missile.x, dy = state.boss.y - missile.y;
+          best = dx * dx + dy * dy;
+          target = state.boss;
+        }
+        for (const rock of state.rocks) {
+          if (rock.y > missile.y + 24) continue;
+          const dx = rock.x - missile.x, dy = rock.y - missile.y;
+          const distance = dx * dx + dy * dy;
+          if (distance < best) { best = distance; target = rock; }
+        }
+        return target;
+      }
+
+      function burst(x, y, color, count) {
+        for (let i = 0; i < count; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 45 + Math.random() * 190;
+          state.particles.push({
+            x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+            life: 0.5 + Math.random() * 0.38, max: 0.88, color, r: 1.5 + Math.random() * 3.5,
+          });
+        }
+      }
+
+      function hit(a, b) {
+        const dx = a.x - b.x, dy = a.y - b.y, rr = a.r + b.radius;
+        return dx * dx + dy * dy < rr * rr;
+      }
+
+      function update(dt) {
+        if (!state.running || state.paused) return;
+        state.time += dt;
+        state.score += dt * 5 * state.combo;
+        state.spawn -= dt;
+        state.rubySpawn -= dt; state.sapphireSpawn -= dt; state.emeraldSpawn -= dt;
+        state.rubyPower = Math.max(0, state.rubyPower - dt);
+        state.emeraldGuard = Math.max(0, state.emeraldGuard - dt);
+        state.fireCooldown -= dt; state.greenCooldown -= dt; state.missileCooldown -= dt;
+        state.shake = Math.max(0, state.shake - dt * 18);
+
+        unlockBulletLanes();
+        unlockGreenLanes();
+        unlockMissiles();
+        updateBoss(dt);
+        updateQuiz(dt);
+        if (!state.running) return;
+
+        const left = state.keys.has("ArrowLeft") || state.keys.has("a") || state.keys.has("A");
+        const right = state.keys.has("ArrowRight") || state.keys.has("d") || state.keys.has("D");
+        const up = state.keys.has("ArrowUp") || state.keys.has("w") || state.keys.has("W");
+        const down = state.keys.has("ArrowDown") || state.keys.has("s") || state.keys.has("S");
+        if (state.pointerX !== null && state.pointerY !== null) {
+          const targetX = clamp(state.pointerX, 46, state.width - 46);
+          const targetY = clamp(state.pointerY, 86, state.height - 58);
+          const previousX = state.player.x, previousY = state.player.y;
+          state.player.x += (targetX - state.player.x) * Math.min(1, dt * 7);
+          state.player.y += (targetY - state.player.y) * Math.min(1, dt * 7);
+          state.player.vx = (state.player.x - previousX) / Math.max(dt, 0.001);
+          state.player.vy = (state.player.y - previousY) / Math.max(dt, 0.001);
+        } else {
+          const inputX = (right ? 1 : 0) - (left ? 1 : 0);
+          const inputY = (down ? 1 : 0) - (up ? 1 : 0);
+          state.player.vx += inputX * 1150 * dt;
+          state.player.vy += inputY * 1150 * dt;
+          state.player.vx *= Math.pow(0.0008, dt);
+          state.player.vy *= Math.pow(0.0008, dt);
+          state.player.x = clamp(state.player.x + state.player.vx * dt, 46, state.width - 46);
+          state.player.y = clamp(state.player.y + state.player.vy * dt, 86, state.height - 58);
+        }
+
+        if (state.fireCooldown <= 0) {
+          fireBullet();
+          state.fireCooldown = clamp(0.28 - state.time * 0.0011, 0.13, 0.28);
+        }
+        if (state.greenLanes > 0 && state.greenCooldown <= 0) {
+          fireGreenBullet();
+          state.greenCooldown = clamp(0.38 - state.time * 0.0007, 0.18, 0.38);
+        }
+        if (state.missileCount > 0 && state.missileCooldown <= 0) {
+          fireMissiles();
+          state.missileCooldown = clamp(1.18 - state.time * 0.002, 0.72, 1.18);
+        }
+
+        if (state.spawn <= 0) {
+          spawnObject();
+          const interval = clamp(0.72 - state.time * 0.01, 0.16, 0.72);
+          // Saat soal muncul, batu dan bintang turun lebih jarang supaya siswa bisa berpikir.
+          const calm = state.quiz.phase === "ask" ? 1.8 : 1;
+          state.spawn = interval * (0.7 + Math.random() * 0.6) * calm;
+        }
+
+        if (state.rubySpawn <= 0) { spawnGem("ruby"); state.rubySpawn = 10; }
+        if (state.sapphireSpawn <= 0) { spawnGem("sapphire"); state.sapphireSpawn = 10; }
+        if (state.emeraldSpawn <= 0) { spawnGem("emerald"); state.emeraldSpawn = 10; }
+
+        for (const bullet of state.bullets) {
+          bullet.x += bullet.vx * dt; bullet.y += bullet.vy * dt; bullet.life -= dt;
+        }
+
+        for (const missile of state.missiles) {
+          const target = nearestRock(missile);
+          if (target) {
+            const dx = target.x - missile.x, dy = target.y - missile.y;
+            const len = Math.max(1, Math.hypot(dx, dy));
+            const desiredSpeed = 470;
+            missile.vx += ((dx / len) * desiredSpeed - missile.vx) * Math.min(1, dt * 4.8);
+            missile.vy += ((dy / len) * desiredSpeed - missile.vy) * Math.min(1, dt * 4.8);
+          } else {
+            missile.vy -= 140 * dt;
+          }
+          missile.x += missile.vx * dt;
+          missile.y += missile.vy * dt;
+          missile.life -= dt;
+          missile.trail.push({ x: missile.x, y: missile.y, life: 0.28 });
+          if (missile.trail.length > 9) missile.trail.shift();
+          for (const point of missile.trail) point.life -= dt;
+          missile.trail = missile.trail.filter((point) => point.life > 0);
+        }
+
+        for (const star of state.stars) {
+          star.y += star.vy * dt;
+          star.x += Math.sin(state.time * 4 + star.wobble) * 18 * dt;
+          star.rot += star.spin * dt;
+        }
+        for (const rock of state.rocks) {
+          rock.y += rock.vy * dt;
+          rock.x += Math.sin(state.time * 2.2 + rock.wobble) * 12 * dt;
+          rock.rot += rock.spin * dt;
+        }
+        for (const gem of state.gems) { gem.y += gem.vy * dt; gem.rot += gem.spin * dt; }
+        for (const projectile of state.bossProjectiles) {
+          projectile.x += projectile.vx * dt;
+          projectile.y += projectile.vy * dt;
+          projectile.rot += projectile.spin * dt;
+        }
+
+        for (let b = state.bullets.length - 1; b >= 0; b--) {
+          const bullet = state.bullets[b];
+          let used = bullet.life <= 0 || bullet.y < -20;
+          if (!used && state.boss && hit(state.boss, bullet)) {
+            used = true;
+            state.score += 8 * bullet.power * state.combo;
+            burst(bullet.x, bullet.y, bullet.color, 8 + bullet.power * 2);
+            damageBoss(bullet.power);
+          }
+          for (let r = state.rocks.length - 1; r >= 0 && !used; r--) {
+            const rock = state.rocks[r];
+            if (hit(rock, bullet)) {
+              rock.hp -= bullet.power;
+              used = true;
+              state.score += 18 * bullet.power * state.combo;
+              burst(bullet.x, bullet.y, bullet.color, 8 + bullet.power * 2);
+              if (rock.hp <= 0) {
+                state.rocks.splice(r, 1);
+                state.streak += 1;
+                state.combo = clamp(1 + Math.floor(state.streak / 5), 1, 9);
+                state.score += 90 * state.combo;
+                burst(rock.x, rock.y, "#ff9f6e", 24);
+              }
+            }
+          }
+          if (used) state.bullets.splice(b, 1);
+        }
+
+        for (let m = state.missiles.length - 1; m >= 0; m--) {
+          const missile = state.missiles[m];
+          let used = missile.life <= 0 || missile.y < -60 || missile.x < -60 || missile.x > state.width + 60;
+          if (!used && state.boss && hit(state.boss, missile)) {
+            used = true;
+            state.score += 80 * state.combo;
+            state.shake = Math.max(state.shake, 5);
+            burst(missile.x, missile.y, "#7dd3fc", 24);
+            damageBoss(10);
+          }
+          for (let r = state.rocks.length - 1; r >= 0 && !used; r--) {
+            const rock = state.rocks[r];
+            if (hit(rock, missile)) {
+              used = true;
+              state.rocks.splice(r, 1);
+              state.streak += 1;
+              state.combo = clamp(1 + Math.floor(state.streak / 5), 1, 9);
+              state.score += 150 * state.combo;
+              state.shake = Math.max(state.shake, 4);
+              burst(rock.x, rock.y, "#7dd3fc", 34);
+              burst(rock.x, rock.y, "#ff9f6e", 18);
+            }
+          }
+          if (used) state.missiles.splice(m, 1);
+        }
+
+        for (let i = state.stars.length - 1; i >= 0; i--) {
+          const star = state.stars[i];
+          if (hit(star, state.player)) {
+            state.stars.splice(i, 1);
+            state.streak += 1;
+            state.combo = clamp(1 + Math.floor(state.streak / 5), 1, 9);
+            state.score += 60 * state.combo;
+            state.shield = clamp(state.shield + 3, 0, 100);
+            burst(star.x, star.y, "#ffd84d", 14);
+          } else if (star.y > state.height + 40) {
+            state.stars.splice(i, 1);
+            state.streak = Math.max(0, state.streak - 1);
+            state.combo = clamp(1 + Math.floor(state.streak / 5), 1, 9);
+          }
+        }
+
+        for (let i = state.gems.length - 1; i >= 0; i--) {
+          const gem = state.gems[i];
+          if (hit(gem, state.player)) {
+            state.gems.splice(i, 1);
+            if (gem.type === "ruby") { state.rubyPower = 5; burst(gem.x, gem.y, gem.color, 26); }
+            else if (gem.type === "sapphire") { state.shield = clamp(state.shield + 20, 0, 100); burst(gem.x, gem.y, gem.color, 24); }
+            else { state.emeraldGuard = 5; burst(gem.x, gem.y, gem.color, 28); }
+          } else if (gem.y > state.height + 40) {
+            state.gems.splice(i, 1);
+          }
+        }
+
+        for (let i = state.bossProjectiles.length - 1; i >= 0; i--) {
+          const projectile = state.bossProjectiles[i];
+          if (hit(projectile, state.player)) {
+            state.bossProjectiles.splice(i, 1);
+            state.shield -= 40;
+            state.streak = 0; state.combo = 1;
+            state.shake = Math.max(state.shake, 7);
+            burst(projectile.x, projectile.y, "#c9cfe8", 18);
+          } else if (projectile.y > state.height + 60 || projectile.x < -80 || projectile.x > state.width + 80) {
+            state.bossProjectiles.splice(i, 1);
+          }
+        }
+
+        for (let i = state.rocks.length - 1; i >= 0; i--) {
+          const rock = state.rocks[i];
+          if (hit(rock, state.player)) {
+            state.rocks.splice(i, 1);
+            state.shield -= rock.type === "bigRock" ? 60 : 24;
+            state.streak = 0; state.combo = 1;
+            state.shake = 8;
+            burst(rock.x, rock.y, "#ff6b6b", 20);
+          } else if (rock.y > state.height + 54) {
+            state.rocks.splice(i, 1);
+          }
+        }
+
+        if (unlockBulletLanes()) { fireBullet(); state.fireCooldown = clamp(0.28 - state.time * 0.0011, 0.13, 0.28); }
+        if (unlockGreenLanes()) { fireGreenBullet(); state.greenCooldown = clamp(0.38 - state.time * 0.0007, 0.18, 0.38); }
+        if (unlockMissiles()) { fireMissiles(); state.missileCooldown = clamp(1.18 - state.time * 0.002, 0.72, 1.18); }
+
+        for (const p of state.particles) {
+          p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 120 * dt; p.life -= dt;
+        }
+        state.particles = state.particles.filter((p) => p.life > 0);
+
+        for (const star of state.backdrop) {
+          star.y += star.speed * dt;
+          if (star.y > state.height + 5) { star.y = -5; star.x = Math.random() * state.width; }
+        }
+        for (const planet of state.planets) {
+          planet.y += 6 * dt;
+          if (planet.y > state.height + planet.r * 2) planet.y = -planet.r * 2;
+        }
+
+        if (state.emeraldGuard <= 0) state.shield -= dt * 1.4;
+        if (state.shield <= 0) endGame();
+        updateHud();
+      }
+
+      /* ================= Gambar (desain baru) ================= */
+      const INK = "#17121f";
+
+      // Roket pemain
+      function drawShip(x, y) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(state.player.vx * 0.0006);
+        ctx.scale(1.15, 1.15);
+        // perisai (permata hijau)
+        if (state.emeraldGuard > 0) {
+          ctx.save();
+          ctx.globalAlpha = 0.35 + Math.sin(state.time * 8) * 0.12;
+          ctx.fillStyle = "#48c97f";
+          ctx.beginPath(); ctx.arc(0, 0, 42, 0, Math.PI * 2); ctx.fill();
+          ctx.globalAlpha = 0.9; ctx.strokeStyle = "#b8ffd6"; ctx.lineWidth = 3; ctx.stroke();
+          ctx.restore();
+        }
+        // api roket
+        const f = Math.sin(state.time * 22) * 5;
+        ctx.fillStyle = "#ff8a3d";
+        ctx.beginPath(); ctx.moveTo(-10, 22); ctx.quadraticCurveTo(0, 50 + f, 10, 22); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = "#ffe066";
+        ctx.beginPath(); ctx.moveTo(-6, 22); ctx.quadraticCurveTo(0, 38 + f * 0.6, 6, 22); ctx.closePath(); ctx.fill();
+        // sirip
+        ctx.lineWidth = 2.5; ctx.strokeStyle = INK; ctx.lineJoin = "round";
+        ctx.fillStyle = "#6c55bd";
+        ctx.beginPath(); ctx.moveTo(-13, 2); ctx.lineTo(-27, 24); ctx.lineTo(-11, 21); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(13, 2); ctx.lineTo(27, 24); ctx.lineTo(11, 21); ctx.closePath(); ctx.fill(); ctx.stroke();
+        // badan
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.moveTo(0, -38);
+        ctx.bezierCurveTo(19, -24, 18, 12, 12, 24);
+        ctx.lineTo(-12, 24);
+        ctx.bezierCurveTo(-18, 12, -19, -24, 0, -38);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        // hidung
+        ctx.fillStyle = "#ff5d8f";
+        ctx.beginPath();
+        ctx.moveTo(0, -38);
+        ctx.bezierCurveTo(9, -31, 13, -25, 14.5, -20);
+        ctx.lineTo(-14.5, -20);
+        ctx.bezierCurveTo(-13, -25, -9, -31, 0, -38);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        // jendela
+        ctx.fillStyle = "#6fa8ff";
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(0, -4, 7.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        ctx.beginPath(); ctx.arc(-2.5, -6.5, 2.2, 0, Math.PI * 2); ctx.fill();
+        // sirip tengah
+        ctx.strokeStyle = "#6c55bd"; ctx.lineWidth = 5; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(0, 11); ctx.lineTo(0, 24); ctx.stroke();
+        ctx.restore();
+      }
+
+      // Peluru energi bulat
+      function drawBullet(bullet) {
+        const r = bullet.power > 1 ? 6 : 4.5;
+        ctx.save();
+        ctx.translate(bullet.x, bullet.y);
+        ctx.shadowColor = bullet.color;
+        ctx.shadowBlur = bullet.power > 1 ? 16 : 10;
+        ctx.fillStyle = bullet.color;
+        ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath(); ctx.arc(0, 0, r * 0.45, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+
+      // Roket kecil pelacak
+      function drawMissile(missile) {
+        ctx.save();
+        for (const point of missile.trail) {
+          ctx.globalAlpha = clamp(point.life / 0.28, 0, 1) * 0.6;
+          ctx.fillStyle = "#ff8fd0";
+          ctx.beginPath(); ctx.arc(point.x, point.y, 5, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.restore();
+        const angle = Math.atan2(missile.vy, missile.vx) + Math.PI / 2;
+        ctx.save();
+        ctx.translate(missile.x, missile.y);
+        ctx.rotate(angle);
+        ctx.fillStyle = "#ffd84d"; ctx.strokeStyle = INK; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.ellipse(0, 0, 5, 11, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#ff5d8f";
+        ctx.beginPath(); ctx.moveTo(-5, 6); ctx.lineTo(0, 15); ctx.lineTo(5, 6); ctx.closePath(); ctx.fill();
+        ctx.restore();
+      }
+
+      // Koin bintang (dulu: bintang hijau)
+      function drawStar(item) {
+        ctx.save();
+        ctx.translate(item.x, item.y);
+        ctx.scale(0.25 + Math.abs(Math.cos(item.rot)) * 0.75, 1);
+        ctx.fillStyle = "#ffd84d"; ctx.strokeStyle = "#b8860b"; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.arc(0, 0, item.r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#fff4b8";
+        ctx.beginPath();
+        for (let i = 0; i < 10; i++) {
+          const radius = i % 2 === 0 ? item.r * 0.58 : item.r * 0.25;
+          const angle = -Math.PI / 2 + (i * Math.PI) / 5;
+          ctx.lineTo(Math.cos(angle) * radius, Math.sin(angle) * radius);
+        }
+        ctx.closePath(); ctx.fill();
+        ctx.restore();
+      }
+
+      // Meteor (dulu: batu merah & batu hitam)
+      function drawRock(item) {
+        ctx.save();
+        ctx.translate(item.x, item.y);
+        ctx.rotate(item.rot);
+        const big = item.type === "bigRock";
+        const points = big ? 12 : 9;
+        const pts = [];
+        for (let i = 0; i < points; i++) {
+          const angle = (i * Math.PI * 2) / points;
+          const radius = item.r * (0.82 + ((i * 31) % 17) / 100);
+          pts.push([Math.cos(angle) * radius, Math.sin(angle) * radius]);
+        }
+        ctx.beginPath();
+        for (let i = 0; i < points; i++) {
+          const [x1, y1] = pts[i], [x2, y2] = pts[(i + 1) % points];
+          const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+          if (i === 0) ctx.moveTo(mx, my);
+          else ctx.quadraticCurveTo(x1, y1, mx, my);
+        }
+        const [fx, fy] = pts[0], [sx, sy] = pts[1];
+        ctx.quadraticCurveTo(fx, fy, (fx + sx) / 2, (fy + sy) / 2);
+        ctx.closePath();
+        ctx.fillStyle = big ? "#3a3152" : "#b07a55";
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = big ? 4 : 2.5;
+        ctx.fill(); ctx.stroke();
+        // kawah
+        ctx.fillStyle = big ? "#2a2340" : "#8a5a3c";
+        for (const [cx, cy, cr] of [[-0.3, -0.2, 0.22], [0.28, 0.1, 0.16], [-0.05, 0.38, 0.12]]) {
+          ctx.beginPath(); ctx.arc(cx * item.r, cy * item.r, cr * item.r, 0, Math.PI * 2); ctx.fill();
+        }
+        if (big) {
+          // retakan merah menyala: tanda bahaya
+          ctx.strokeStyle = "#ff5d5d"; ctx.lineWidth = 4; ctx.lineCap = "round";
+          ctx.shadowColor = "#ff5d5d"; ctx.shadowBlur = 14;
+          ctx.beginPath();
+          ctx.moveTo(-item.r * 0.6, -item.r * 0.1); ctx.lineTo(-item.r * 0.2, item.r * 0.05); ctx.lineTo(0, -item.r * 0.25); ctx.lineTo(item.r * 0.45, -item.r * 0.05);
+          ctx.moveTo(-item.r * 0.1, item.r * 0.2); ctx.lineTo(item.r * 0.15, item.r * 0.55);
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = "rgba(255,255,255,0.25)";
+          ctx.beginPath(); ctx.arc(-item.r * 0.35, -item.r * 0.4, item.r * 0.12, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // Kotak kekuatan (dulu: permata)
+      function drawGem(gem) {
+        const color = gem.type === "ruby" ? "#ff6b6b" : gem.type === "sapphire" ? "#6fa8ff" : "#48c97f";
+        ctx.save();
+        ctx.translate(gem.x, gem.y);
+        ctx.rotate(Math.sin(gem.rot) * 0.3);
+        ctx.fillStyle = color; ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.roundRect(-16, -16, 32, 32, 9); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        if (gem.type === "ruby") {
+          ctx.moveTo(3, -11); ctx.lineTo(-7, 2); ctx.lineTo(-1, 2); ctx.lineTo(-4, 11); ctx.lineTo(7, -3); ctx.lineTo(1, -3); ctx.closePath();
+        } else if (gem.type === "sapphire") {
+          ctx.moveTo(0, 9); ctx.bezierCurveTo(-13, 0, -9, -12, 0, -5); ctx.bezierCurveTo(9, -12, 13, 0, 0, 9);
+        } else {
+          ctx.moveTo(0, -11); ctx.lineTo(9, -7); ctx.lineTo(8, 2); ctx.quadraticCurveTo(5, 8, 0, 11); ctx.quadraticCurveTo(-5, 8, -8, 2); ctx.lineTo(-9, -7); ctx.closePath();
+        }
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Bola jawaban bergambar segi empat; tabrak dengan pesawat.
+      const shapePoints = {
+        square: [[-22,-22],[22,-22],[22,22],[-22,22]],
+        rectangle: [[-27,-16],[27,-16],[27,16],[-27,16]],
+        parallelogram: [[-13,-20],[27,-20],[13,20],[-27,20]],
+        kite: [[0,-27],[19,3],[0,27],[-19,3]],
+        rhombus: [[0,-26],[25,0],[0,26],[-25,0]],
+        trapezoid: [[-13,-19],[13,-19],[27,20],[-27,20]],
+        rightTrapezoid: [[-25,-20],[12,-20],[27,20],[-25,20]],
+        scaleneTrapezoid: [[-5,-20],[18,-20],[28,20],[-27,20]],
+        irregular: [[-25,-18],[25,-24],[16,16],[-10,27]],
+      };
+      function drawOrb(orb) {
+        ctx.save(); ctx.translate(orb.x, orb.y);
+        ctx.shadowColor = "rgba(255,216,77,.7)"; ctx.shadowBlur = 18;
+        ctx.fillStyle = "#f8f1ff"; ctx.strokeStyle = "#ffd84d"; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(0, 0, orb.r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.shadowBlur = 0;
+        const points = shapePoints[orb.value];
+        if (points) {
+          ctx.beginPath(); points.forEach(([x,y],i) => i ? ctx.lineTo(x,y) : ctx.moveTo(x,y)); ctx.closePath();
+          ctx.fillStyle = "#43c7ad"; ctx.strokeStyle = "#194b71"; ctx.lineWidth = 3;
+          ctx.fill(); ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      // Serangan BOS UFO: sinar hijau
+      function drawBossFlame(boss) {
+        if (!boss || !boss.flame) return;
+        const flame = boss.flame;
+        const left = flame.x - flame.width / 2;
+        const top = boss.y + boss.r * 0.5;
+        const height = state.height - top;
+        ctx.save();
+        if (flame.warmup > 0) {
+          ctx.globalAlpha = 0.22 + Math.sin(state.time * 26) * 0.08;
+          ctx.fillStyle = "#9bff9b";
+          ctx.fillRect(left, top, flame.width, height);
+          ctx.globalAlpha = 0.85;
+          ctx.strokeStyle = "#9bff9b"; ctx.lineWidth = 3; ctx.setLineDash([12, 10]);
+          ctx.strokeRect(left, top, flame.width, height);
+        } else {
+          ctx.globalAlpha = 0.8 + Math.sin(state.time * 30) * 0.1;
+          const g = ctx.createLinearGradient(0, top, 0, state.height);
+          g.addColorStop(0, "rgba(190, 255, 190, 0.95)");
+          g.addColorStop(0.4, "rgba(72, 201, 127, 0.6)");
+          g.addColorStop(1, "rgba(72, 201, 127, 0.12)");
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.moveTo(boss.x - 22, top); ctx.lineTo(boss.x + 22, top);
+          ctx.lineTo(left + flame.width, state.height); ctx.lineTo(left, state.height);
+          ctx.closePath(); ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // Serangan RAJA KOMET: hujan api setengah layar
+      function drawDemonLaser(boss) {
+        if (!boss || !boss.laser) return;
+        const laser = boss.laser;
+        const top = boss.y + boss.r * 0.35;
+        const height = state.height - top;
+        ctx.save();
+        if (laser.warmup > 0) {
+          ctx.globalAlpha = 0.22 + Math.sin(state.time * 28) * 0.08;
+          ctx.fillStyle = "#ffb347";
+          ctx.fillRect(laser.x, top, laser.width, height);
+          ctx.globalAlpha = 0.85;
+          ctx.strokeStyle = "#ffd84d"; ctx.setLineDash([12, 10]); ctx.lineWidth = 3;
+          ctx.strokeRect(laser.x, top, laser.width, height);
+        } else {
+          ctx.globalAlpha = 0.8 + Math.sin(state.time * 36) * 0.1;
+          const g = ctx.createLinearGradient(0, top, 0, state.height);
+          g.addColorStop(0, "rgba(255, 244, 200, 0.95)");
+          g.addColorStop(0.25, "rgba(255, 122, 61, 0.75)");
+          g.addColorStop(1, "rgba(255, 90, 40, 0.18)");
+          ctx.fillStyle = g;
+          ctx.fillRect(laser.x, top, laser.width, height);
+        }
+        ctx.restore();
+      }
+
+      // Gerigi yang dilempar BOS ROBOT
+      function drawGear(x, y, size, rot) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rot || 0);
+        ctx.fillStyle = "#c9cfe8"; ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        const teeth = 8;
+        for (let i = 0; i < teeth * 2; i++) {
+          const a = (i * Math.PI) / teeth;
+          const r = i % 2 === 0 ? size : size * 0.72;
+          ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+        }
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#6c55bd";
+        ctx.beginPath(); ctx.arc(0, 0, size * 0.3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawUfoBoss(boss) {
+        const r = boss.r, flash = boss.hitFlash > 0;
+        ctx.save();
+        ctx.translate(boss.x, boss.y);
+        ctx.strokeStyle = INK; ctx.lineWidth = 3;
+        // kubah + alien
+        ctx.fillStyle = flash ? "#ffffff" : "#bfefff";
+        ctx.beginPath(); ctx.ellipse(0, -10, r * 0.52, r * 0.5, 0, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#7be07b";
+        ctx.beginPath(); ctx.arc(0, -16, r * 0.26, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath(); ctx.arc(0, -19, r * 0.12, 0, Math.PI * 2); ctx.fill();
+        const look = clamp((state.player.x - boss.x) / 200, -1, 1) * 2.5;
+        ctx.fillStyle = INK;
+        ctx.beginPath(); ctx.arc(look, -18, r * 0.055, 0, Math.PI * 2); ctx.fill();
+        // piring
+        ctx.fillStyle = flash ? "#ffffff" : "#6c55bd";
+        ctx.beginPath(); ctx.ellipse(0, 4, r * 1.15, r * 0.36, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        for (let i = -3; i <= 3; i++) {
+          const on = Math.floor(state.time * 6 + i) % 2 === 0;
+          ctx.fillStyle = on ? "#ffd84d" : "#ff8fd0";
+          ctx.beginPath(); ctx.arc(i * r * 0.3, 6, 4.5, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.fillStyle = "#4a3a9a";
+        ctx.beginPath(); ctx.ellipse(0, 17, r * 0.5, r * 0.14, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawRobotBoss(boss) {
+        const r = boss.r, flash = boss.hitFlash > 0;
+        ctx.save();
+        ctx.translate(boss.x, boss.y);
+        ctx.strokeStyle = INK; ctx.lineWidth = 3;
+        // antena
+        ctx.beginPath(); ctx.moveTo(0, -r * 0.85); ctx.lineTo(0, -r * 1.25); ctx.stroke();
+        ctx.fillStyle = Math.sin(state.time * 8) > 0 ? "#ef6b6b" : "#ffd84d";
+        ctx.beginPath(); ctx.arc(0, -r * 1.3, 7, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        // telinga baut
+        ctx.fillStyle = "#8f98bf";
+        ctx.beginPath(); ctx.roundRect(-r * 1.18, -r * 0.3, r * 0.25, r * 0.6, 6); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.roundRect(r * 0.93, -r * 0.3, r * 0.25, r * 0.6, 6); ctx.fill(); ctx.stroke();
+        // kepala
+        ctx.fillStyle = flash ? "#ffffff" : "#aab4d8";
+        ctx.beginPath(); ctx.roundRect(-r, -r * 0.85, r * 2, r * 1.7, 16); ctx.fill(); ctx.stroke();
+        // mata layar
+        const look = clamp((state.player.x - boss.x) / 200, -1, 1) * 4;
+        for (const s of [-1, 1]) {
+          ctx.fillStyle = "#1f2a44";
+          ctx.beginPath(); ctx.roundRect(s * r * 0.45 - 13, -r * 0.45, 26, 22, 6); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = "#6ff0ff";
+          ctx.beginPath(); ctx.arc(s * r * 0.45 + look, -r * 0.45 + 11, 5, 0, Math.PI * 2); ctx.fill();
+        }
+        // mulut kisi
+        ctx.fillStyle = "#1f2a44";
+        ctx.beginPath(); ctx.roundRect(-r * 0.5, r * 0.25, r, r * 0.34, 6); ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = "#8f98bf"; ctx.lineWidth = 2;
+        for (let i = 1; i < 5; i++) {
+          const x = -r * 0.5 + (r * i) / 5;
+          ctx.beginPath(); ctx.moveTo(x, r * 0.29); ctx.lineTo(x, r * 0.55); ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      function drawCometKing(boss) {
+        const r = boss.r, flash = boss.hitFlash > 0;
+        ctx.save();
+        ctx.translate(boss.x, boss.y);
+        // aura api
+        for (let i = 0; i < 12; i++) {
+          const a = (i / 12) * Math.PI * 2 + state.time * 1.5;
+          const rr = r * (1.08 + Math.sin(state.time * 6 + i) * 0.08);
+          ctx.fillStyle = i % 2 ? "rgba(255,179,71,0.85)" : "rgba(255,122,61,0.85)";
+          ctx.beginPath(); ctx.arc(Math.cos(a) * rr, Math.sin(a) * rr, r * 0.22, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.strokeStyle = INK; ctx.lineWidth = 4;
+        ctx.fillStyle = flash ? "#ffffff" : "#ff7a3d";
+        ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        // mahkota
+        ctx.fillStyle = "#ffd84d"; ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.5, -r * 0.78); ctx.lineTo(-r * 0.55, -r * 1.25); ctx.lineTo(-r * 0.25, -r * 1.0);
+        ctx.lineTo(0, -r * 1.35); ctx.lineTo(r * 0.25, -r * 1.0); ctx.lineTo(r * 0.55, -r * 1.25); ctx.lineTo(r * 0.5, -r * 0.78);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        // mata & alis
+        for (const s of [-1, 1]) {
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath(); ctx.ellipse(s * r * 0.32, -r * 0.1, r * 0.17, r * 0.2, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = INK;
+          ctx.beginPath(); ctx.arc(s * r * 0.3, -r * 0.05, r * 0.07, 0, Math.PI * 2); ctx.fill();
+          ctx.lineWidth = 5; ctx.lineCap = "round";
+          ctx.beginPath(); ctx.moveTo(s * r * 0.52, -r * 0.4); ctx.lineTo(s * r * 0.14, -r * 0.28); ctx.stroke();
+          ctx.lineWidth = 3;
+        }
+        // mulut
+        ctx.fillStyle = "#7a1f1f";
+        ctx.beginPath(); ctx.ellipse(0, r * 0.4, r * 0.28, r * 0.13, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawBoss(boss) {
+        if (!boss) return;
+        if (boss.kind === "bull") drawRobotBoss(boss);
+        else if (boss.kind === "demon") drawCometKing(boss);
+        else drawUfoBoss(boss);
+        drawBossHealth(boss);
+      }
+
+      function drawBossHealth(boss) {
+        const barWidth = Math.min(320, state.width * 0.55);
+        const barX = boss.x - barWidth / 2;
+        const barY = Math.max(24, boss.y - boss.r * (boss.kind === "bull" ? 1.45 : boss.kind === "demon" ? 1.5 : 1) - 26);
+        ctx.save();
+        ctx.fillStyle = "#ffffff"; ctx.strokeStyle = INK; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.roundRect(barX, barY, barWidth, 12, 6); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#ff5d8f";
+        ctx.beginPath(); ctx.roundRect(barX + 2, barY + 2, (barWidth - 4) * clamp(boss.hp / boss.maxHp, 0, 1), 8, 4); ctx.fill();
+        ctx.fillStyle = "#ffffff";
+        ctx.font = '600 12px "Fredoka", "Nunito", sans-serif';
+        ctx.textAlign = "center";
+        const label = boss.kind === "bull" ? "BOS ROBOT" : boss.kind === "demon" ? "RAJA KOMET" : "BOS UFO";
+        ctx.fillText(`${label} ${formatNum(boss.scoreMark)}`, boss.x, barY - 5);
+        ctx.restore();
+      }
+
+      function drawBossProjectile(projectile) {
+        if (projectile.type === "bullHead") drawGear(projectile.x, projectile.y, projectile.r, projectile.rot);
+      }
+
+      // Latar: bintang berkelip + planet
+      function drawBackdrop() {
+        for (const star of state.backdrop) {
+          ctx.globalAlpha = star.glow * (0.6 + 0.4 * Math.sin(state.time * 3 + star.x));
+          ctx.fillStyle = "#fff6d8";
+          ctx.beginPath();
+          const s = star.r * 1.6;
+          ctx.moveTo(star.x, star.y - s); ctx.lineTo(star.x + s * 0.3, star.y); ctx.lineTo(star.x, star.y + s); ctx.lineTo(star.x - s * 0.3, star.y);
+          ctx.closePath(); ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+        for (const p of state.planets) {
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.globalAlpha = 0.9;
+          if (p.type === "ring") {
+            ctx.strokeStyle = "#ffd84d"; ctx.lineWidth = 6;
+            ctx.beginPath(); ctx.ellipse(0, 0, p.r * 1.7, p.r * 0.45, -0.35, Math.PI, Math.PI * 2); ctx.stroke();
+            ctx.fillStyle = "#ff8fd0";
+            ctx.beginPath(); ctx.arc(0, 0, p.r, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = "rgba(255,255,255,0.25)";
+            ctx.beginPath(); ctx.ellipse(-p.r * 0.1, -p.r * 0.3, p.r * 0.8, p.r * 0.18, -0.35, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = "#ffd84d"; ctx.lineWidth = 6;
+            ctx.beginPath(); ctx.ellipse(0, 0, p.r * 1.7, p.r * 0.45, -0.35, 0, Math.PI); ctx.stroke();
+          } else {
+            ctx.fillStyle = "#cfc6ff";
+            ctx.beginPath(); ctx.arc(0, 0, p.r, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = "#a99ce6";
+            ctx.beginPath(); ctx.arc(-p.r * 0.3, -p.r * 0.2, p.r * 0.22, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(p.r * 0.35, p.r * 0.25, p.r * 0.15, 0, Math.PI * 2); ctx.fill();
+          }
+          ctx.restore();
+        }
+      }
+
+      function render() {
+        const wobbleX = state.shake ? (Math.random() - 0.5) * state.shake : 0;
+        const wobbleY = state.shake ? (Math.random() - 0.5) * state.shake : 0;
+        ctx.clearRect(0, 0, state.width, state.height);
+        ctx.save();
+        ctx.translate(wobbleX, wobbleY);
+        drawBackdrop();
+        drawBossFlame(state.boss);
+        drawDemonLaser(state.boss);
+        for (const star of state.stars) drawStar(star);
+        for (const rock of state.rocks) drawRock(rock);
+        for (const gem of state.gems) drawGem(gem);
+        for (const orb of state.quiz.orbs) drawOrb(orb);
+        drawBoss(state.boss);
+        for (const projectile of state.bossProjectiles) drawBossProjectile(projectile);
+        for (const bullet of state.bullets) drawBullet(bullet);
+        for (const missile of state.missiles) drawMissile(missile);
+        for (const p of state.particles) {
+          ctx.globalAlpha = clamp(p.life / p.max, 0, 1);
+          ctx.fillStyle = p.color;
+          ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+        drawShip(state.player.x, state.player.y);
+        ctx.restore();
+      }
+
+      let last = performance.now();
+      function loop(now) {
+        const dt = Math.min(0.033, (now - last) / 1000);
+        last = now;
+        update(dt);
+        render();
+        requestAnimationFrame(loop);
+      }
+
+      // Pilihan tingkat soal
+      function refreshLevelButtons() {
+        levelPick.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lv === state.quizLevel)));
+      }
+      levelPick.querySelectorAll("button").forEach((b) => {
+        b.addEventListener("click", () => {
+          state.quizLevel = b.dataset.lv;
+          writeStore(levelKey, state.quizLevel);
+          refreshLevelButtons();
+        });
+      });
+      refreshLevelButtons();
+
+      window.addEventListener("resize", resize);
+      if (window.ResizeObserver) new ResizeObserver(() => resize()).observe(gameArea);
+      gameArea.addEventListener("pointermove", (event) => {
+        if (event.target.closest("button")) return;
+        const rect = canvas.getBoundingClientRect();
+        state.pointerX = event.clientX - rect.left;
+        state.pointerY = event.clientY - rect.top;
+      });
+      gameArea.addEventListener("pointerleave", () => {
+        state.pointerX = null;
+        state.pointerY = null;
+      });
+      window.addEventListener("keydown", (event) => {
+        if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", " ", "Spacebar"].includes(event.key)) event.preventDefault();
+        if (event.key === " " || event.key === "Spacebar" || event.key === "p" || event.key === "P") {
+          if (!state.running || state.gameOver) reset();
+          else pauseToggle();
+          return;
+        }
+        state.keys.add(event.key);
+      });
+      window.addEventListener("keyup", (event) => state.keys.delete(event.key));
+
+      function bindTouch(button, key) {
+        const down = (event) => { event.preventDefault(); state.keys.add(key); };
+        const up = (event) => { event.preventDefault(); state.keys.delete(key); };
+        button.addEventListener("pointerdown", down);
+        button.addEventListener("pointerup", up);
+        button.addEventListener("pointercancel", up);
+        button.addEventListener("pointerleave", up);
+      }
+
+      bindTouch(leftBtn, "ArrowLeft");
+      bindTouch(rightBtn, "ArrowRight");
+      startBtn.addEventListener("click", () => {
+        if (state.paused) {
+          state.paused = false;
+          overlay.classList.add("hidden");
+        } else {
+          reset();
+        }
+      });
+      pauseBtn.addEventListener("click", pauseToggle);
+      restartBtn.addEventListener("click", reset);
+
+      // Tombol "Kembali ke menu": jeda dulu, lalu minta konfirmasi
+      function showMenu() {
+        state.running = false; state.paused = false; state.gameOver = false;
+        state.boss = null; state.bossProjectiles = [];
+        state.bullets = []; state.missiles = []; state.stars = []; state.rocks = []; state.gems = []; state.particles = [];
+        state.quiz = { phase: "wait", timer: 4, q: null, orbs: [], msgTimer: 0 };
+        state.keys.clear();
+        hideBanner();
+        showOverlay(MENU_TITLE, MENU_MESSAGE, "🚀 Mulai terbang", true);
+      }
+      menuBtn.addEventListener("click", () => {
+        if (!state.running || state.gameOver) { showMenu(); return; }
+        state.paused = true;
+        showOverlay("Kembali ke menu?", "Permainan ini belum selesai. Skor dari permainan ini tidak akan disimpan.", "▶️ Lanjutkan", false);
+        confirmMenuBtn.classList.remove("hidden");
+      });
+      confirmMenuBtn.addEventListener("click", showMenu);
+
+      resize();
+      bestEl.textContent = state.best;
+      requestAnimationFrame(loop);
+    </script>
+  </body>
+</html>
